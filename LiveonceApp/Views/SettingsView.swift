@@ -13,6 +13,13 @@ struct SettingsView: View {
                 Stepper(value: $profile.lifeExpectancyYears, in: 50...120) {
                     Text("Life Expectancy: \(profile.lifeExpectancyYears)")
                 }
+                Picker("Unit", selection: $profile.preferredUnit) {
+                    Text("Week").tag("week")
+                    Text("Month").tag("month")
+                    Text("Quarter").tag("quarter")
+                    Text("Year").tag("year")
+                }
+                .pickerStyle(.segmented)
             }
             .navigationTitle("Settings")
             .toolbar {
