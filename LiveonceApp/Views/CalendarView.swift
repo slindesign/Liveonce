@@ -109,14 +109,15 @@ struct LifeGridView: View {
         let safeTotal = max(total, 1)
         let width = max(availableSize.width, 0)
         let height = max(availableSize.height, 0)
-        var bestColumns = 8
+        let minCell: CGFloat = 4
+        let maxCols = max(1, min(60, Int((width + spacing) / (minCell + spacing))))
+        var bestColumns = 1
         var bestCell: CGFloat = 0
 
-        for columns in 8...60 {
+        for columns in 1...maxCols {
             let rows = Int(ceil(Double(safeTotal) / Double(columns)))
-            let cellWidth = (width - spacing * CGFloat(columns - 1)) / CGFloat(columns)
-            let cellHeight = (height - spacing * CGFloat(rows - 1)) / CGFloat(rows)
-            let cell = min(cellWidth, cellHeight)
+            let cell = bestCellSize(width: width, height: height, columns: columns, rows: rows, spacing: spacing)
+            guard cell > 0 else { continue }
             if cell > bestCell {
                 bestCell = cell
                 bestColumns = columns
@@ -138,5 +139,19 @@ struct LifeGridView: View {
             }
         }
         .frame(width: availableSize.width, height: availableSize.height, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func bestCellSize(
+        width: CGFloat,
+        height: CGFloat,
+        columns: Int,
+        rows: Int,
+        spacing: CGFloat
+    ) -> CGFloat {
+        let cellWidth = (width - spacing * CGFloat(columns - 1)) / CGFloat(columns)
+        let cellHeight = (height - spacing * CGFloat(rows - 1)) / CGFloat(rows)
+        guard cellWidth > 0, cellHeight > 0 else { return 0 }
+        return min(cellWidth, cellHeight)
     }
 }
