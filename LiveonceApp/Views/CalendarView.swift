@@ -2,9 +2,10 @@ import SwiftUI
 import SwiftData
 
 struct CalendarView: View {
-    @Environment(\.modelContext) private var modelContext
     @Query private var profiles: [UserProfile]
     @State private var showSettings = false
+
+    private let gridSpacing: CGFloat = 4
 
     private var profile: UserProfile? {
         profiles.first
@@ -13,34 +14,23 @@ struct CalendarView: View {
     var body: some View {
         NavigationStack {
             if let profile {
-                let metrics = LifeCalculator.lifeWeeksMetrics(birthDate: profile.birthDate, lifeExpectancyYears: profile.lifeExpectancyYears)
-                let progressPercent = Int((metrics.progress * 100).rounded())
+                let metrics = LifeUnitMetrics(profile: profile)
 
-                VStack(spacing: 16) {
-                    KPIHeaderView(remaining: metrics.remainingWeeks, used: metrics.usedWeeks, progressPercent: progressPercent)
+                VStack(spacing: 12) {
+                    Text("你还剩 \(metrics.remaining) \(metrics.unitLabel)")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                    Picker("Unit", selection: Binding(
-                        get: { profile.preferredUnit },
-                        set: { newValue in
-                            profile.preferredUnit = newValue
-                            profile.updatedAt = Date()
-                            WidgetSummaryUpdater.refresh(modelContext: modelContext)
-                        })
-                    ) {
-                        Text("Week").tag("week")
-                        Text("Year").tag("year")
+                    GeometryReader { proxy in
+                        LifeGridView(
+                            total: metrics.total,
+                            used: metrics.used,
+                            availableSize: proxy.size,
+                            spacing: gridSpacing
+                        )
                     }
-                    .pickerStyle(.segmented)
-
-                    if profile.preferredUnit == "year" {
-                        YearGridView(usedYears: metrics.usedWeeks / 52, totalYears: profile.lifeExpectancyYears)
-                    } else {
-                        WeekGridView(usedWeeks: metrics.usedWeeks, totalWeeks: metrics.totalWeeks)
-                    }
-
-                    Spacer()
                 }
-                .padding()
+                .padding([.top, .horizontal])
                 .navigationTitle("Death Calendar")
                 .toolbar {
                     Button {
@@ -59,73 +49,94 @@ struct CalendarView: View {
     }
 }
 
-struct KPIHeaderView: View {
-    let remaining: Int
+private struct LifeUnitMetrics {
+    let total: Int
     let used: Int
-    let progressPercent: Int
+    let remaining: Int
+    let unitLabel: String
 
-    var body: some View {
-        HStack(spacing: 16) {
-            KPIItemView(title: "Remaining", value: "\(remaining)")
-            KPIItemView(title: "Used", value: "\(used)")
-            KPIItemView(title: "Progress", value: "\(progressPercent)%")
+    init(profile: UserProfile, calendar: Calendar = .current, today: Date = Date()) {
+        let unit = profile.preferredUnit
+        let start = profile.birthDate.startOfDay(using: calendar)
+        let end = today.startOfDay(using: calendar)
+        let totalUnits: Int
+        let usedUnits: Int
+
+        switch unit {
+        case "month":
+            totalUnits = profile.lifeExpectancyYears * 12
+            usedUnits = calendar.dateComponents([.month], from: start, to: end).month ?? 0
+        case "quarter":
+            totalUnits = profile.lifeExpectancyYears * 4
+            let months = calendar.dateComponents([.month], from: start, to: end).month ?? 0
+            usedUnits = months / 3
+        case "year":
+            totalUnits = max(profile.lifeExpectancyYears, 1)
+            usedUnits = calendar.dateComponents([.year], from: start, to: end).year ?? 0
+        default:
+            totalUnits = max(profile.lifeExpectancyYears * 52, 1)
+            let metrics = LifeCalculator.lifeWeeksMetrics(birthDate: profile.birthDate, lifeExpectancyYears: profile.lifeExpectancyYears, today: today, calendar: calendar)
+            usedUnits = metrics.usedWeeks
         }
-        .frame(maxWidth: .infinity)
+
+        total = max(totalUnits, 1)
+        used = max(min(usedUnits, total), 0)
+        remaining = max(total - used, 0)
+        unitLabel = LifeUnitMetrics.displayLabel(for: unit)
+    }
+
+    static func displayLabel(for unit: String) -> String {
+        switch unit {
+        case "month":
+            return "月"
+        case "quarter":
+            return "季"
+        case "year":
+            return "年"
+        default:
+            return "周"
+        }
     }
 }
 
-struct KPIItemView: View {
-    let title: String
-    let value: String
+struct LifeGridView: View {
+    let total: Int
+    let used: Int
+    let availableSize: CGSize
+    let spacing: CGFloat
 
-    var body: some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.title2)
-                .fontWeight(.semibold)
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(12)
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(12)
-    }
-}
+    private var layout: (columns: Int, cellSize: CGFloat) {
+        let safeTotal = max(total, 1)
+        let width = max(availableSize.width, 0)
+        let height = max(availableSize.height, 0)
+        var bestColumns = 8
+        var bestCell: CGFloat = 0
 
-struct WeekGridView: View {
-    let usedWeeks: Int
-    let totalWeeks: Int
-
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 12)
-
-    var body: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 4) {
-                ForEach(0..<totalWeeks, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(index < usedWeeks ? Color.primary.opacity(0.8) : Color.primary.opacity(0.15))
-                        .frame(height: 12)
-                }
+        for columns in 8...60 {
+            let rows = Int(ceil(Double(safeTotal) / Double(columns)))
+            let cellWidth = (width - spacing * CGFloat(columns - 1)) / CGFloat(columns)
+            let cellHeight = (height - spacing * CGFloat(rows - 1)) / CGFloat(rows)
+            let cell = min(cellWidth, cellHeight)
+            if cell > bestCell {
+                bestCell = cell
+                bestColumns = columns
             }
         }
+
+        return (columns: bestColumns, cellSize: max(bestCell, 1))
     }
-}
-
-struct YearGridView: View {
-    let usedYears: Int
-    let totalYears: Int
-
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 10)
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 8) {
-            ForEach(0..<totalYears, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(index < usedYears ? Color.primary.opacity(0.8) : Color.primary.opacity(0.15))
-                    .frame(height: 24)
+        let layout = layout
+        let columns = Array(repeating: GridItem(.fixed(layout.cellSize), spacing: spacing), count: layout.columns)
+
+        LazyVGrid(columns: columns, spacing: spacing) {
+            ForEach(0..<total, id: \.self) { index in
+                RoundedRectangle(cornerRadius: max(layout.cellSize * 0.2, 2))
+                    .fill(index < used ? Color.primary.opacity(0.85) : Color.primary.opacity(0.15))
+                    .frame(width: layout.cellSize, height: layout.cellSize)
             }
         }
+        .frame(width: availableSize.width, height: availableSize.height, alignment: .topLeading)
     }
 }
