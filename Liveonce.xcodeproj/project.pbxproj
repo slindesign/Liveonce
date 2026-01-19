@@ -182,7 +182,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 600000000000000000000001 /* Build configuration list for PBXNativeTarget "LiveonceApp" */;
 			buildPhases = (
-				100000000000000000000001 /* Sources */,
+				100000000000000000000101 /* Sources */,
 				100000000000000000000002 /* Frameworks */,
 				100000000000000000000003 /* Resources */,
 				100000000000000000000004 /* Embed App Extensions */,
@@ -201,9 +201,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 600000000000000000000002 /* Build configuration list for PBXNativeTarget "LiveonceWidget" */;
 			buildPhases = (
-				100000000000000000000005 /* Sources */,
+				100000000000000000000105 /* Sources */,
 				100000000000000000000006 /* Frameworks */,
-				100000000000000000000007 /* Resources */,
+				100000000000000000000107 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -258,7 +258,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		100000000000000000000007 /* Resources */ = {
+		100000000000000000000107 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -268,7 +268,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		100000000000000000000001 /* Sources */ = {
+		100000000000000000000101 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -288,7 +288,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		100000000000000000000005 /* Sources */ = {
+		100000000000000000000105 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
