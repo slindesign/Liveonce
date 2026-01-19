@@ -7,6 +7,12 @@ SwiftUI + SwiftData MVP for the “Death Calendar + Life Budget” app.
 - `LiveonceWidget/`: WidgetKit extension source.
 - `Shared/`: App + widget shared models (WidgetSummary).
 
+## Open in Xcode & Run
+1. Open `Liveonce.xcodeproj` in Xcode.
+2. Select the **LiveonceApp** scheme and an iPhone simulator (e.g., iPhone 15).
+3. Click **Run** (⌘R) to launch the app.
+4. To add the widget, long-press the Home Screen in the simulator, tap **+**, then choose **LiveonceWidget** and add it.
+
 ## App Group Setup
 1. In Xcode, add an App Group capability to both the app target and widget target.
 2. Use the same identifier as defined in `Shared/WidgetSummary.swift`:
